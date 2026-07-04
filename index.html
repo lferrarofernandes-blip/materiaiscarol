@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>O Chat Quebrado</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #f0ede8;
+  --paper: #faf9f6;
+  --ink: #1e1a14;
+  --ink2: #3a3428;
+  --muted: #8a8070;
+  --line: #ddd8cc;
+  --green: #2e7d5e;
+  --green-l: #e8f5ee;
+  --green-m: #8cc8aa;
+  --red: #8a2820;
+  --red-l: #fdf0ee;
+  --red-m: #d4948c;
+  --amber: #8a5a10;
+  --amber-l: #fdf4e0;
+  --amber-m: #d4a84c;
+  --blue: #1e4a7a;
+  --blue-l: #e8f0fa;
+  --blue-m: #7aaad4;
+  --purple: #4a2878;
+  --purple-l: #f0eaf8;
+  --purple-m: #a888d4;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  min-height: 100vh;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+/* TOPBAR */
+.topbar {
+  background: var(--ink);
+  padding: 12px 22px;
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 14px;
+  flex-wrap: wrap;
+  position: sticky; top: 0; z-index: 100;
+  border-bottom: 3px solid var(--green);
+}
+.top-title {
+  font-size: 17px; font-weight: 700;
+  color: #fff; letter-spacing: .01em;
+}
+.top-sub { font-size: 11px; color: rgba(255,255,255,.45); font-weight: 500; }
+.top-right { display: flex; align-items: center; gap: 10px; }
+.score-pill {
+  background: rgba(255,255,255,.1);
+  border: 1.5px solid rgba(255,255,255,.2);
+  border-radius: 20px; padding: 5px 14px;
+  font-size: 13px; font-weight: 700; color: var(--amber-m);
+}
+.tab-row {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  padding: 8px 22px 0;
+  background: var(--ink);
+  border-bottom: 3px solid var(--green);
+}
+.ttab {
+  background: transparent;
+  border: 1.5px solid rgba(255,255,255,.18);
+  color: rgba(255,255,255,.55);
+  font-size: 12px; font-weight: 600;
+  padding: 6px 14px; border-radius: 6px 6px 0 0;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+  margin-bottom: -3px; border-bottom-color: transparent;
+}
+.ttab:hover { color: #fff; border-color: rgba(255,255,255,.4); }
+.ttab.active {
+  background: var(--paper);
+  border-color: var(--green);
+  border-bottom-color: var(--paper);
+  color: var(--green);
+}
+
+/* SCREENS */
+.screen { display: none; }
+.screen.active { display: block; animation: up .25s ease; }
+@keyframes up { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
+
+.main { max-width: 760px; margin: 0 auto; padding: 28px 20px 80px; }
+
+/* PAGE HEADER */
+.page-hdr { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1.5px solid var(--line); }
+.eyebrow {
+  font-size: 11px; font-weight: 700; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--green);
+  margin-bottom: 6px; display: flex; align-items: center; gap: 8px;
+}
+.eyebrow::after { content:''; flex:1; height:1px; background:var(--green-m); opacity:.4; }
+.page-title {
+  font-size: 26px; font-weight: 800;
+  color: var(--ink); line-height: 1.2; margin-bottom: 7px;
+}
+.page-desc { font-size: 14px; color: var(--muted); line-height: 1.65; max-width: 520px; }
+
+/* CHAT CONTAINER */
+.chat-container {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.07);
+}
+.chat-header {
+  background: var(--green);
+  padding: 12px 16px;
+  display: flex; align-items: center; gap: 10px;
+}
+.chat-context {
+  font-size: 12px; font-weight: 700;
+  color: rgba(255,255,255,.85); font-style: italic;
+}
+.chat-context strong { color: #fff; font-style: normal; }
+
+.chat-body { padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; }
+
+/* MESSAGES */
+.msg-wrap { display: flex; flex-direction: column; gap: 3px; }
+.msg-wrap.right { align-items: flex-end; }
+
+.msg-name {
+  font-size: 11px; font-weight: 700;
+  color: var(--muted); padding: 0 4px;
+}
+
+.msg {
+  max-width: 75%;
+  padding: 10px 14px;
+  border-radius: 16px;
+  font-size: 14px; font-weight: 500;
+  line-height: 1.55;
+  cursor: pointer;
+  transition: all .18s;
+  position: relative;
+  border: 2px solid transparent;
+  user-select: none;
+}
+.msg.left {
+  background: #f0ece4;
+  border-bottom-left-radius: 4px;
+  color: var(--ink2);
+}
+.msg.right {
+  background: #d4e8d8;
+  border-bottom-right-radius: 4px;
+  color: var(--ink);
+}
+.msg:hover { transform: scale(1.015); }
+.msg.selected-problem {
+  border-color: var(--red);
+  background: var(--red-l);
+  color: var(--red);
+}
+.msg.selected-ok {
+  border-color: var(--green);
+  background: var(--green-l);
+  color: var(--green);
+}
+.msg.revealed-problem { border-color: var(--red); background: var(--red-l); }
+.msg.revealed-ok { border-color: var(--green); background: var(--green-l); }
+
+.msg-marker {
+  font-size: 11px; font-weight: 700;
+  padding: 2px 8px; border-radius: 10px;
+  margin-top: 4px; display: none;
+  align-self: flex-start;
+}
+.msg-wrap.right .msg-marker { align-self: flex-end; }
+.msg-marker.show { display: block; }
+.mk-problem { background: var(--red-l); color: var(--red); border: 1px solid var(--red-m); }
+.mk-ok { background: var(--green-l); color: var(--green); border: 1px solid var(--green-m); }
+
+/* DITADO BADGE */
+.ditado-badge {
+  display: inline-block;
+  background: var(--amber-l);
+  border: 1.5px solid var(--amber-m);
+  border-radius: 8px;
+  padding: 2px 8px;
+  font-size: 11px; font-weight: 700;
+  color: var(--amber);
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+/* INSTRUCTIONS */
+.inst-box {
+  background: var(--blue-l);
+  border: 1.5px solid var(--blue-m);
+  border-radius: 12px;
+  padding: 13px 16px;
+  margin-bottom: 16px;
+  font-size: 13.5px; color: var(--blue);
+  font-weight: 600; line-height: 1.6;
+  display: flex; gap: 10px; align-items: flex-start;
+}
+.inst-icon { font-size: 18px; flex-shrink: 0; margin-top: 2px; }
+
+/* ANALYSIS AREA */
+.analysis {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+.analysis-title {
+  font-size: 14px; font-weight: 800;
+  color: var(--ink); margin-bottom: 12px;
+  display: flex; align-items: center; gap: 8px;
+}
+
+/* PROBLEM CHIPS */
+.chips { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700;
+  padding: 5px 13px; border-radius: 20px;
+  cursor: pointer; transition: all .15s;
+  border: 2px solid var(--line);
+  background: var(--bg); color: var(--muted);
+}
+.chip:hover { border-color: var(--ink); color: var(--ink); }
+.chip.sel { background: var(--ink); border-color: var(--ink); color: #fff; }
+.chip.sel-troca { background: var(--red); border-color: var(--red); color: #fff; }
+.chip.sel-topico { background: var(--purple); border-color: var(--purple); color: #fff; }
+.chip.sel-espera { background: var(--blue); border-color: var(--blue); color: #fff; }
+.chip.sel-duplo { background: var(--amber); border-color: var(--amber); color: #fff; }
+
+/* TEXTAREA */
+.nota {
+  width: 100%;
+  border: 1.5px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-family: inherit; font-size: 14px;
+  color: var(--ink); background: var(--bg);
+  resize: vertical; min-height: 52px;
+  outline: none; transition: border .15s; line-height: 1.55;
+}
+.nota:focus { border-color: var(--green); background: #fff; }
+.nota::placeholder { color: #bbb; font-style: italic; }
+.nota-label {
+  font-size: 11px; font-weight: 700;
+  letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); margin: 10px 0 5px;
+}
+
+/* BUTTONS */
+.btn {
+  font-family: inherit; font-size: 14px; font-weight: 700;
+  padding: 10px 22px; border-radius: 10px;
+  border: 2px solid; cursor: pointer; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 7px;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn-green { background: var(--green); border-color: var(--green); color: #fff; }
+.btn-outline { background: transparent; border-color: var(--line); color: var(--muted); }
+.btn-outline:hover { border-color: var(--ink); color: var(--ink); }
+.btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+
+/* GABARITO */
+.gabarito {
+  background: var(--green-l);
+  border: 1.5px solid var(--green-m);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 12px;
+  display: none;
+}
+.gabarito.show { display: block; animation: up .25s ease; }
+.gabarito-title {
+  font-size: 11px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .09em;
+  color: var(--green); margin-bottom: 8px;
+}
+.gabarito-body { font-size: 13.5px; color: #1e5a3a; line-height: 1.7; }
+.gabarito-body strong { color: var(--green); }
+
+/* PROGRESS BAR */
+.prog-wrap { margin-bottom: 20px; }
+.prog-track { height: 6px; background: var(--line); border-radius: 6px; overflow: hidden; margin-bottom: 5px; }
+.prog-fill { height: 100%; background: var(--green); border-radius: 6px; transition: width .5s ease; }
+.prog-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+
+/* RESULTADO */
+.result-box {
+  background: var(--paper);
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  padding: 28px 24px;
+  text-align: center;
+  margin-bottom: 20px;
+}
+.result-title { font-size: 26px; font-weight: 800; color: var(--ink); margin-bottom: 6px; }
+.result-sub { font-size: 14px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+.result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+@media(max-width:480px){ .result-grid { grid-template-columns: 1fr; } }
+.result-stat {
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 12px; padding: 14px;
+}
+.result-num { font-size: 28px; font-weight: 800; color: var(--green); }
+.result-lbl { font-size: 12px; color: var(--muted); font-weight: 600; margin-top: 2px; }
+
+/* TIMER */
+.timer {
+  position: fixed; bottom: 20px; right: 20px;
+  background: var(--ink); border: 2px solid var(--green);
+  border-radius: 12px; padding: 10px 14px;
+  text-align: center; min-width: 80px; z-index: 200;
+}
+.timer-val { font-size: 20px; font-weight: 800; color: #fff; letter-spacing: .05em; }
+.timer-lbl { font-size: 9px; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 4px; }
+.timer-btns { display: flex; gap: 4px; margin-top: 6px; }
+.tbtn {
+  flex: 1; padding: 4px; border-radius: 6px;
+  border: none; font-size: 10px; font-weight: 700; cursor: pointer;
+}
+.tbtn-go { background: var(--green); color: #fff; }
+.tbtn-rst { background: rgba(255,255,255,.1); color: rgba(255,255,255,.6); }
+
+/* LEGEND */
+.legend {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.leg-item {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; font-weight: 600; color: var(--muted);
+}
+.leg-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<!-- TIMER -->
+<div class="timer">
+  <div class="timer-lbl">Sessão</div>
+  <div class="timer-val" id="timerVal">00:00</div>
+  <div class="timer-btns">
+    <button class="tbtn tbtn-go" id="timerBtn" onclick="toggleTimer()">Iniciar</button>
+    <button class="tbtn tbtn-rst" onclick="resetTimer()">Zerar</button>
+  </div>
+</div>
+
+<!-- TOPBAR -->
+<nav class="topbar">
+  <div>
+    <div class="top-title">O Chat Quebrado</div>
+    <div class="top-sub">Encontre os problemas na conversa</div>
+  </div>
+  <div class="top-right">
+    <div class="score-pill" id="scoreDisplay">0 pontos</div>
+  </div>
+</nav>
+<div class="tab-row">
+  <button class="ttab active" onclick="go('orientacoes')">Como jogar</button>
+  <button class="ttab" onclick="go('c1')">Conversa 1</button>
+  <button class="ttab" onclick="go('c2')">Conversa 2</button>
+  <button class="ttab" onclick="go('c3')">Conversa 3</button>
+  <button class="ttab" onclick="go('c4')">Conversa 4</button>
+  <button class="ttab" onclick="go('resultado')">Resultado</button>
+</div>
+
+<!-- ══ ORIENTAÇÕES ══ -->
+<div class="screen active" id="s-orientacoes">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Instruções</div>
+      <div class="page-title">O Chat Quebrado</div>
+      <div class="page-desc">Cada conversa tem mensagens com problemas escondidos. Você vai descobrir onde a conversa "quebrou" e por quê.</div>
+    </div>
+
+    <div class="inst-box">
+      <div class="inst-icon">1</div>
+      <div><strong>Leia a conversa</strong> com atenção. Preste atenção no que cada pessoa está dizendo e em como a outra responde.</div>
+    </div>
+    <div class="inst-box">
+      <div class="inst-icon">2</div>
+      <div><strong>Clique nas mensagens</strong> que você acha que têm algum problema. Elas vão ficar marcadas em vermelho.</div>
+    </div>
+    <div class="inst-box" style="background:var(--purple-l);border-color:var(--purple-m);color:var(--purple)">
+      <div class="inst-icon">3</div>
+      <div><strong>Identifique o tipo de problema:</strong> troca de turno, manutenção de tópico, tempo de espera ou duplo sentido.</div>
+    </div>
+    <div class="inst-box" style="background:var(--amber-l);border-color:var(--amber-m);color:var(--amber)">
+      <div class="inst-icon">4</div>
+      <div><strong>Conserte a conversa:</strong> escreva como aquela mensagem poderia ser diferente para a conversa fluir melhor.</div>
+    </div>
+
+    <div style="background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--ink);margin-bottom:10px">Tipos de problema que você vai encontrar</div>
+      <div class="legend">
+        <div class="leg-item"><div class="leg-dot" style="background:var(--red)"></div>Troca de turno (interrompeu ou falou fora de hora)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--purple)"></div>Manutenção de tópico (mudou de assunto sem avisar)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--blue)"></div>Tempo de espera (não deu tempo de a outra responder)</div>
+        <div class="leg-item"><div class="leg-dot" style="background:var(--amber)"></div>Duplo sentido (entendeu ao pé da letra ou usou ditado)</div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="go('c1')">Começar a Conversa 1</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONVERSA 1 ══ -->
+<div class="screen" id="s-c1">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 1 de 4</div>
+      <div class="page-title">No recreio</div>
+      <div class="page-desc">Sofia e Ana estão conversando no recreio. Leia com atenção e encontre onde a conversa quebrou.</div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" style="width:25%"></div></div>
+      <div class="prog-label">Conversa 1 de 4</div>
+    </div>
+
+    <div class="inst-box">
+      <div class="inst-icon">👆</div>
+      <div>Clique nas mensagens com problema. Depois, identifique o tipo e conserte.</div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-context"><strong>Contexto:</strong> Sofia e Ana se encontram no recreio. Sofia está animada para contar uma novidade.</div>
+      </div>
+      <div class="chat-body">
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Sofia</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Ana, você soube que a professora cancelou a prova de sexta?</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Ana</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Não! Que ótimo! Eu ainda não tinha estudado nada.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Sofia</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Sofia usou o ditado 'cada macaco no seu galho' mas Ana não entendeu e pensou que era sobre um macaco de verdade. Duplo sentido!">É, cada macaco no seu galho. A professora decidiu focar no que ela sabe.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Ana</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="topico" data-explain="Ana mudou completamente de assunto sem avisar. Ela deveria ter perguntado o que Sofia quis dizer com o ditado. Problema de manutenção de tópico!">Falando em macaco, você viu aquele vídeo engraçado de macaco que está viralizando?</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Sofia</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Hã? Não vi. Mas você entendeu o que eu disse sobre a professora?</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Ana</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="espera" data-explain="Ana mandou três mensagens seguidas sem dar tempo para Sofia responder. Problema de tempo de espera!">Entendi sim! Muito bom! Ah, e outra coisa, você vai à festa da Júlia? Porque eu estou pensando em ir mas minha mãe precisa me levar.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-title">Análise da Conversa 1</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">Quais tipos de problema você encontrou?</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-topico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que Ana deveria ter dito quando Sofia falou "cada macaco no seu galho"?</div>
+      <textarea class="nota" placeholder="Escreva aqui como Ana poderia ter respondido melhor..."></textarea>
+      <div class="nota-label">Como Ana poderia ter mudado de assunto de forma mais educada?</div>
+      <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('c2')">Próxima conversa</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>Mensagem 3 (Sofia):</strong> usou o ditado "cada macaco no seu galho" que significa que cada pessoa deve fazer o que sabe fazer, ficando no seu lugar. Ana não percebeu o duplo sentido e associou literalmente a um macaco de verdade.<br><br>
+          <strong>Mensagem 4 (Ana):</strong> mudou completamente de assunto sem avisar. Ela deveria ter perguntado "o que você quis dizer com isso?" antes de falar de outra coisa.<br><br>
+          <strong>Mensagem 6 (Ana):</strong> não deu tempo de Sofia responder. Juntou três assuntos diferentes numa mesma mensagem sem pausar.<br><br>
+          <strong>Como Ana poderia ter respondido na mensagem 4:</strong> "Cada macaco no seu galho... você quer dizer que ela resolveu não dar a prova porque não estava preparada para corrigir?"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONVERSA 2 ══ -->
+<div class="screen" id="s-c2">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 2 de 4</div>
+      <div class="page-title">Em casa, hora do jantar</div>
+      <div class="page-desc">Laura está no celular. A mãe entra na cozinha. Leia com atenção.</div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" style="width:50%"></div></div>
+      <div class="prog-label">Conversa 2 de 4</div>
+    </div>
+
+    <div class="inst-box">
+      <div class="inst-icon">👆</div>
+      <div>Clique nas mensagens com problema. Depois, identifique o tipo e conserte.</div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-context"><strong>Contexto:</strong> Laura está no celular há duas horas. A mãe chega na cozinha e começa a arrumar a mesa para o jantar.</div>
+      </div>
+      <div class="chat-body">
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Mãe</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="A mãe usou duplo sentido. 'Que silêncio bom aqui em casa' não é um elogio ao silêncio. É uma forma indireta de dizer que Laura está ignorando ela e que gostaria de atenção. Laura entendeu ao pé da letra.">Nossa, que silêncio bom aqui em casa hoje...</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Laura</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Laura entendeu ao pé da letra e concordou, sem perceber que a mãe estava fazendo uma crítica indireta. Ela deveria ter prestado atenção no contexto.">É, está bem quieto mesmo. Gosto assim.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Mãe</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">O jantar está quase pronto.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Laura</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="topico" data-explain="Laura mudou de assunto falando sobre a escola sem reconhecer que a mãe estava tentando criar um momento de conexão. Problema de manutenção de tópico e falta de percepção da intenção da mãe.">Tá. Ah mãe, a professora falou que a gente vai ter uma excursão mês que vem.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Mãe</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="'O cachorro chupando manga' é um ditado que significa algo ridículo ou absurdo de acontecer. A mãe está dizendo ironicamente que é raro Laura conversar com ela. Laura provavelmente não vai entender.">Ah é? O cão chupando manga! Você me contando uma novidade da escola!</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Laura</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Laura não entendeu o ditado e tentou corrigir a mãe literalmente. Ela não percebeu que era uma crítica bem-humorada sobre a falta de comunicação entre elas.">Mãe, cachorro não chupa manga. Isso não faz sentido.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-title">Análise da Conversa 2</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">Quais tipos de problema você encontrou?</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-topico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que a mãe quis dizer com "que silêncio bom aqui em casa"?</div>
+      <textarea class="nota" placeholder="Escreva o que você acha que a mãe queria dizer de verdade..."></textarea>
+      <div class="nota-label">O que significa "o cão chupando manga"? Como Laura deveria ter respondido?</div>
+      <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('c3')">Próxima conversa</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>"Que silêncio bom aqui em casa":</strong> a mãe não está elogiando o silêncio. Ela está dizendo indiretamente que Laura está no celular há tempo demais e que gostaria de conversar. É uma crítica suave disfarçada de comentário.<br><br>
+          <strong>"O cão chupando manga":</strong> é um ditado que descreve algo impossível ou muito raro de acontecer. A mãe estava dizendo com humor que Laura raramente conta coisas da escola para ela. Como se fosse um milagre.<br><br>
+          <strong>Como Laura poderia ter respondido:</strong> "Você está falando que eu nunca te conto nada, né mãe? Tem razão, me desculpa. Posso te contar sobre a excursão enquanto a gente janta?"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONVERSA 3 ══ -->
+<div class="screen" id="s-c3">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 3 de 4</div>
+      <div class="page-title">No grupo da escola</div>
+      <div class="page-desc">Pedro, Camila e Rafa estão conversando no grupo da escola. Algo saiu errado.</div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" style="width:75%"></div></div>
+      <div class="prog-label">Conversa 3 de 4</div>
+    </div>
+
+    <div class="inst-box">
+      <div class="inst-icon">👆</div>
+      <div>Clique nas mensagens com problema. Depois, identifique o tipo e conserte.</div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-context"><strong>Contexto:</strong> o grupo está decidindo quem vai apresentar qual parte do trabalho. Pedro estava explicando a divisão.</div>
+      </div>
+      <div class="chat-body">
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Pedro</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Então, eu fico com a introdução e Camila fica com a conclusão. Rafa, você pode fazer a parte do meio?</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Rafa</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="troca" data-explain="Pedro ainda estava explicando a divisão e esperando uma resposta de Rafa. Camila interrompeu o raciocínio sem deixar Rafa responder. Problema de troca de turno.">Gente, eu vi que a apresentação é na quinta e não na sexta!</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Camila</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="espera" data-explain="Camila não deu tempo de ninguém responder sobre a data. Ela já mudou de assunto novamente. Problema de tempo de espera e manutenção de tópico.">Na quinta?? Mas eu tenho futebol na quinta! Ah Pedro, eu posso fazer a introdução e você faz a conclusão? E sobre o ditado que a professora pediu pra gente usar, eu pensei em usar "mais perdido que cego em tiroteio" pra descrever o personagem principal!</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Rafa</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Rafa entendeu ao pé da letra. 'Mais perdido que cego em tiroteio' significa alguém completamente desorientado, sem saber o que está fazendo. Não é sobre ser cego de verdade.">A gente não pode usar isso. O personagem não é cego.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Pedro</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Rafa, "mais perdido que cego em tiroteio" é um ditado. Significa que a pessoa está totalmente desorientada, não que ela é cega de verdade.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Rafa</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="topico" data-explain="">Ah entendi. Falando em tiroteio, você viu aquele filme de ação que estreou?</div>
+          <div class="msg-marker"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-title">Análise da Conversa 3</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">Quais tipos de problema você encontrou?</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-topico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que significa "mais perdido que cego em tiroteio"?</div>
+      <textarea class="nota" placeholder="Explique o significado com suas palavras..."></textarea>
+      <div class="nota-label">Como Rafa poderia ter mudado de assunto para o filme de forma mais educada?</div>
+      <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('c4')">Próxima conversa</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>Mensagem 2 (Rafa):</strong> interrompeu Pedro que ainda estava organizando a divisão e esperando uma resposta de Rafa. Troca de turno.<br><br>
+          <strong>Mensagem 3 (Camila):</strong> não deu tempo de ninguém responder sobre a data e já emendou vários assuntos numa mensagem só. Tempo de espera.<br><br>
+          <strong>Mensagem 4 (Rafa):</strong> entendeu "mais perdido que cego em tiroteio" ao pé da letra. O ditado significa alguém totalmente desorientado e sem rumo, como se não soubesse nem por onde começar.<br><br>
+          <strong>Mensagem 6 (Rafa):</strong> usou a palavra "tiroteio" do ditado como gancho para mudar de assunto. Poderia ter dito: "Entendi! Ah, e quando a gente terminar de resolver aqui, posso te contar sobre um filme?"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ CONVERSA 4 ══ -->
+<div class="screen" id="s-c4">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 4 de 4</div>
+      <div class="page-title">Entre amigas</div>
+      <div class="page-desc">Bianca e Letícia conversando pelo celular. Esta é a mais difícil!</div>
+    </div>
+
+    <div class="prog-wrap">
+      <div class="prog-track"><div class="prog-fill" style="width:100%"></div></div>
+      <div class="prog-label">Última conversa!</div>
+    </div>
+
+    <div class="inst-box">
+      <div class="inst-icon">👆</div>
+      <div>Esta conversa tem mais duplo sentido e ironia. Preste atenção no tom de cada mensagem.</div>
+    </div>
+
+    <div class="chat-container">
+      <div class="chat-header">
+        <div class="chat-context"><strong>Contexto:</strong> Bianca cancelou um plano com Letícia na última hora, pela segunda vez no mesmo mês.</div>
+      </div>
+      <div class="chat-body">
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Bianca</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Lê, me desculpa mas hoje não vai dar. Surgiu uma coisa aqui em casa.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Letícia</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="'Cara de um, focinho do outro' significa que duas coisas são idênticas, não têm diferença. Letícia está dizendo ironicamente que é a mesma situação de sempre, que Bianca sempre cancela. Bianca vai entender?">Tá bom. Cara de um, focinho do outro.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Bianca</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Bianca entendeu ao pé da letra e tentou corrigir o ditado. Ela não percebeu que Letícia estava dizendo que essa situação é sempre a mesma coisa, que ela sempre cancela.">Ei, eu tenho cara, não tenho focinho! Isso foi mal educada.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Letícia</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="'Pode ir descansando' significa 'pode parar', 'não adianta'. Letícia está dizendo que Bianca pode parar de pedir desculpas porque é sempre a mesma coisa. Mas parece que ela está dizendo para Bianca descansar literalmente.">Pode ir descansando os pedidos de desculpa então.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap left">
+          <div class="msg-name">Bianca</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="topico" data-explain="Bianca ignorou completamente o que Letícia disse e mudou de assunto. Ela deveria ter perguntado o que Letícia quis dizer ou reconhecido que Letícia estava magoada.">Tá, descansando. Ah, você assistiu a série que eu indiquei?</div>
+          <div class="msg-marker"></div>
+        </div>
+
+        <div class="msg-wrap right">
+          <div class="msg-name">Letícia</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none" data-explain="">Não assisti. E honestamente não estou com vontade de conversar agora.</div>
+          <div class="msg-marker"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="analysis">
+      <div class="analysis-title">Análise da Conversa 4</div>
+      <div style="font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px">Quais tipos de problema você encontrou?</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-topico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que Letícia quis dizer com "cara de um, focinho do outro"?</div>
+      <textarea class="nota" placeholder="Explique o significado e a intenção de Letícia..."></textarea>
+      <div class="nota-label">O que significa "pode ir descansando os pedidos de desculpa"?</div>
+      <textarea class="nota" placeholder="Explique com suas palavras..."></textarea>
+      <div class="nota-label">Como Bianca deveria ter respondido para a conversa não quebrar?</div>
+      <textarea class="nota" placeholder="Escreva como Bianca poderia ter respondido..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('resultado')">Ver resultado final</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>"Cara de um, focinho do outro":</strong> significa que duas coisas são exatamente iguais, sem diferença nenhuma. Letícia estava dizendo que esta situação é idêntica a outras que já aconteceram. Bianca sempre cancela do mesmo jeito.<br><br>
+          <strong>"Pode ir descansando os pedidos de desculpa":</strong> significa "pode parar", "não adianta mais". Letícia está dizendo que os pedidos de desculpa não têm mais efeito porque a situação se repete sempre.<br><br>
+          <strong>Como Bianca deveria ter respondido:</strong> "Letícia, você está me dizendo que isso já aconteceu outras vezes e que está cansada disso, né? Entendo. Me desculpa de verdade. Posso te ligar mais tarde para conversarmos?"<br><br>
+          <strong>O maior problema desta conversa:</strong> Bianca não percebeu nenhum dos sinais de que Letícia estava magoada e ainda mudou de assunto para uma série. Ela precisaria parar, perceber a intenção de Letícia e reconhecer a mágoa antes de continuar qualquer conversa.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ RESULTADO ══ -->
+<div class="screen" id="s-resultado">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Resultado final</div>
+      <div class="page-title">Você terminou!</div>
+    </div>
+
+    <div class="result-box">
+      <div class="result-title" id="resultTitle">Muito bem!</div>
+      <div class="result-sub">Você analisou quatro conversas e encontrou os problemas escondidos. Cada ditado que você identificou é um superpoder novo!</div>
+      <div class="result-grid">
+        <div class="result-stat">
+          <div class="result-num">4</div>
+          <div class="result-lbl">Conversas analisadas</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-num">4</div>
+          <div class="result-lbl">Ditados populares explorados</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-num">3</div>
+          <div class="result-lbl">Tipos de problema trabalhados</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-num" style="color:var(--amber)">+</div>
+          <div class="result-lbl">Duplo sentido em situações reais</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:12px">Os ditados que você viu hoje</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="background:var(--amber-l);border:1.5px solid var(--amber-m);border-radius:10px;padding:11px 14px">
+          <div style="font-size:13px;font-weight:800;color:var(--amber);margin-bottom:3px">Cada macaco no seu galho</div>
+          <div style="font-size:13px;color:#5a3a08">Cada pessoa deve fazer o que sabe e ficar no seu lugar.</div>
+        </div>
+        <div style="background:var(--amber-l);border:1.5px solid var(--amber-m);border-radius:10px;padding:11px 14px">
+          <div style="font-size:13px;font-weight:800;color:var(--amber);margin-bottom:3px">O cão chupando manga</div>
+          <div style="font-size:13px;color:#5a3a08">Algo impossível ou muito raro de acontecer.</div>
+        </div>
+        <div style="background:var(--amber-l);border:1.5px solid var(--amber-m);border-radius:10px;padding:11px 14px">
+          <div style="font-size:13px;font-weight:800;color:var(--amber);margin-bottom:3px">Mais perdido que cego em tiroteio</div>
+          <div style="font-size:13px;color:#5a3a08">Totalmente desorientado, sem saber o que está fazendo.</div>
+        </div>
+        <div style="background:var(--amber-l);border:1.5px solid var(--amber-m);border-radius:10px;padding:11px 14px">
+          <div style="font-size:13px;font-weight:800;color:var(--amber);margin-bottom:3px">Cara de um, focinho do outro</div>
+          <div style="font-size:13px;color:#5a3a08">Duas coisas ou situações exatamente iguais, sem diferença nenhuma.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="go('orientacoes')">Jogar novamente</button>
+      <button class="btn btn-outline" onclick="go('c1')">Voltar ao início</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const TABS = ['orientacoes','c1','c2','c3','c4','resultado'];
+function go(id) {
+  TABS.forEach(t => document.getElementById('s-'+t).classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  document.querySelectorAll('.ttab').forEach((b,i) => b.classList.toggle('active', TABS[i]===id));
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+let score = 0;
+function toggleMsg(el, type) {
+  const wrap = el.parentElement;
+  const marker = wrap.querySelector('.msg-marker');
+  const problem = el.dataset.problem;
+
+  if (el.classList.contains('selected-problem') || el.classList.contains('selected-ok')) {
+    el.classList.remove('selected-problem','selected-ok');
+    marker.classList.remove('show','mk-problem','mk-ok');
+    marker.textContent = '';
+    return;
+  }
+
+  if (type === 'problem') {
+    el.classList.add('selected-problem');
+    marker.className = 'msg-marker show mk-problem';
+    const labels = { troca:'Troca de turno', topico:'Mudou de assunto', espera:'Não esperou', duplo:'Duplo sentido' };
+    marker.textContent = labels[problem] || 'Problema identificado';
+    score += 5;
+  } else {
+    el.classList.add('selected-ok');
+    marker.className = 'msg-marker show mk-ok';
+    marker.textContent = 'Sem problema aqui';
+  }
+  document.getElementById('scoreDisplay').textContent = score + ' pontos';
+}
+
+function toggleChip(el, cls) {
+  const active = el.classList.contains(cls);
+  el.classList.remove('sel-troca','sel-topico','sel-espera','sel-duplo','sel');
+  if (!active) el.classList.add(cls);
+}
+
+function toggleGab(btn) {
+  const gab = btn.nextElementSibling;
+  const show = gab.classList.contains('show');
+  gab.classList.toggle('show');
+  btn.textContent = show ? 'Ver gabarito' : 'Fechar gabarito';
+}
+
+// TIMER
+let secs = 0, running = false, interval = null;
+function pad(n) { return String(n).padStart(2,'0'); }
+function updateT() { document.getElementById('timerVal').textContent = pad(Math.floor(secs/60))+':'+pad(secs%60); }
+function toggleTimer() {
+  const b = document.getElementById('timerBtn');
+  if (running) { clearInterval(interval); running=false; b.textContent='Iniciar'; }
+  else { running=true; b.textContent='Pausar'; interval=setInterval(()=>{ secs++; updateT(); },1000); }
+}
+function resetTimer() { clearInterval(interval); running=false; secs=0; updateT(); document.getElementById('timerBtn').textContent='Iniciar'; }
+</script>
+</body>
+</html>
