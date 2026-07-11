@@ -1,0 +1,1069 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dizeres Populares — Jogo da Carol</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#f0ede8; --paper:#faf9f6; --ink:#1e1a14; --ink2:#3a3428;
+  --muted:#8a8070; --line:#ddd8cc;
+  --green:#2e7d5e; --green-l:#e8f5ee; --green-m:#8cc8aa;
+  --red:#8a2820; --red-l:#fdf0ee; --red-m:#d4948c;
+  --amber:#8a5a10; --amber-l:#fdf4e0; --amber-m:#d4a84c;
+  --blue:#1e4a7a; --blue-l:#e8f0fa; --blue-m:#7aaad4;
+  --purple:#4a2878; --purple-l:#f0eaf8; --purple-m:#a888d4;
+  --orange:#7a3a10; --orange-l:#fdf0e0; --orange-m:#d4884c;
+}
+body { font-family:'Segoe UI',system-ui,sans-serif; background:var(--bg); color:var(--ink); min-height:100vh; font-size:15px; line-height:1.6; }
+
+/* TOPBAR */
+.topbar { background:var(--ink); padding:12px 22px; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; position:sticky; top:0; z-index:100; border-bottom:3px solid var(--green); }
+.top-title { font-size:17px; font-weight:700; color:#fff; }
+.top-sub { font-size:11px; color:rgba(255,255,255,.45); font-weight:500; }
+.score-pill { background:rgba(255,255,255,.1); border:1.5px solid rgba(255,255,255,.2); border-radius:20px; padding:5px 14px; font-size:13px; font-weight:700; color:var(--amber-m); }
+.tab-row { display:flex; gap:4px; flex-wrap:wrap; padding:8px 22px 0; background:var(--ink); border-bottom:3px solid var(--green); overflow-x:auto; }
+.ttab { background:transparent; border:1.5px solid rgba(255,255,255,.18); color:rgba(255,255,255,.55); font-size:12px; font-weight:600; padding:6px 12px; border-radius:6px 6px 0 0; cursor:pointer; transition:all .15s; white-space:nowrap; margin-bottom:-3px; border-bottom-color:transparent; flex-shrink:0; }
+.ttab:hover { color:#fff; border-color:rgba(255,255,255,.4); }
+.ttab.active { background:var(--paper); border-color:var(--green); border-bottom-color:var(--paper); color:var(--green); }
+
+/* SCREENS */
+.screen { display:none; }
+.screen.active { display:block; animation:up .25s ease; }
+@keyframes up { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+.main { max-width:760px; margin:0 auto; padding:28px 20px 80px; }
+
+/* HEADERS */
+.page-hdr { margin-bottom:24px; padding-bottom:18px; border-bottom:1.5px solid var(--line); }
+.eyebrow { font-size:11px; font-weight:700; letter-spacing:.1em; text-transform:uppercase; color:var(--green); margin-bottom:6px; display:flex; align-items:center; gap:8px; }
+.eyebrow::after { content:''; flex:1; height:1px; background:var(--green-m); opacity:.4; }
+.page-title { font-size:26px; font-weight:800; color:var(--ink); line-height:1.2; margin-bottom:7px; }
+.page-desc { font-size:14px; color:var(--muted); line-height:1.65; max-width:520px; }
+
+/* PROGRESS */
+.prog-wrap { margin-bottom:20px; }
+.prog-track { height:6px; background:var(--line); border-radius:6px; overflow:hidden; margin-bottom:5px; }
+.prog-fill { height:100%; background:var(--green); border-radius:6px; transition:width .5s ease; }
+.prog-label { font-size:11px; color:var(--muted); font-weight:600; }
+
+/* CHAT */
+.chat-container { background:var(--paper); border:1.5px solid var(--line); border-radius:16px; overflow:hidden; margin-bottom:20px; box-shadow:0 2px 12px rgba(0,0,0,.07); }
+.chat-header { background:var(--green); padding:12px 16px; }
+.chat-context { font-size:12px; font-weight:700; color:rgba(255,255,255,.85); font-style:italic; }
+.chat-context strong { color:#fff; font-style:normal; }
+.chat-body { padding:16px 14px; display:flex; flex-direction:column; gap:10px; }
+.msg-wrap { display:flex; flex-direction:column; gap:3px; }
+.msg-wrap.right { align-items:flex-end; }
+.msg-name { font-size:11px; font-weight:700; color:var(--muted); padding:0 4px; }
+.msg { max-width:75%; padding:10px 14px; border-radius:16px; font-size:14px; font-weight:500; line-height:1.55; cursor:pointer; transition:all .18s; border:2px solid transparent; user-select:none; }
+.msg.left { background:#f0ece4; border-bottom-left-radius:4px; color:var(--ink2); }
+.msg.right { background:#d4e8d8; border-bottom-right-radius:4px; color:var(--ink); }
+.msg:hover { transform:scale(1.015); }
+.msg.selected-problem { border-color:var(--red); background:var(--red-l); color:var(--red); }
+.msg.selected-ok { border-color:var(--green); background:var(--green-l); color:var(--green); }
+.msg-marker { font-size:11px; font-weight:700; padding:2px 8px; border-radius:10px; margin-top:4px; display:none; align-self:flex-start; }
+.msg-wrap.right .msg-marker { align-self:flex-end; }
+.msg-marker.show { display:block; }
+.mk-problem { background:var(--red-l); color:var(--red); border:1px solid var(--red-m); }
+.mk-ok { background:var(--green-l); color:var(--green); border:1px solid var(--green-m); }
+
+/* INST BOX */
+.inst-box { background:var(--blue-l); border:1.5px solid var(--blue-m); border-radius:12px; padding:13px 16px; margin-bottom:16px; font-size:13.5px; color:var(--blue); font-weight:600; line-height:1.6; display:flex; gap:10px; align-items:flex-start; }
+.inst-icon { font-size:18px; flex-shrink:0; margin-top:2px; }
+
+/* ANALYSIS */
+.analysis { background:var(--paper); border:1.5px solid var(--line); border-radius:14px; padding:18px 20px; margin-bottom:18px; }
+.analysis-title { font-size:14px; font-weight:800; color:var(--ink); margin-bottom:12px; }
+.chips { display:flex; gap:7px; flex-wrap:wrap; margin-bottom:12px; }
+.chip { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:700; padding:5px 13px; border-radius:20px; cursor:pointer; transition:all .15s; border:2px solid var(--line); background:var(--bg); color:var(--muted); }
+.chip:hover { border-color:var(--ink); color:var(--ink); }
+.chip.sel-troca { background:var(--red); border-color:var(--red); color:#fff; }
+.chip.sel-tópico { background:var(--purple); border-color:var(--purple); color:#fff; }
+.chip.sel-espera { background:var(--blue); border-color:var(--blue); color:#fff; }
+.chip.sel-duplo { background:var(--amber); border-color:var(--amber); color:#fff; }
+.chip.sel-infer { background:var(--green); border-color:var(--green); color:#fff; }
+
+/* NOTA */
+.nota { width:100%; border:1.5px solid var(--line); border-radius:10px; padding:10px 13px; font-family:inherit; font-size:14px; color:var(--ink); background:var(--bg); resize:vertical; min-height:52px; outline:none; transition:border .15s; line-height:1.55; }
+.nota:focus { border-color:var(--green); background:#fff; }
+.nota::placeholder { color:#bbb; font-style:italic; }
+.nota-label { font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase; color:var(--muted); margin:10px 0 5px; }
+
+/* BUTTONS */
+.btn { font-family:inherit; font-size:14px; font-weight:700; padding:10px 22px; border-radius:10px; border:2px solid; cursor:pointer; transition:all .15s; display:inline-flex; align-items:center; gap:7px; }
+.btn:hover { transform:translateY(-1px); }
+.btn-green { background:var(--green); border-color:var(--green); color:#fff; }
+.btn-outline { background:transparent; border-color:var(--line); color:var(--muted); }
+.btn-outline:hover { border-color:var(--ink); color:var(--ink); }
+.btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:14px; }
+
+/* GABARITO */
+.gabarito { background:var(--green-l); border:1.5px solid var(--green-m); border-radius:12px; padding:14px 16px; margin-top:12px; display:none; }
+.gabarito.show { display:block; animation:up .25s ease; }
+.gabarito-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.09em; color:var(--green); margin-bottom:8px; }
+.gabarito-body { font-size:13.5px; color:#1e5a3a; line-height:1.7; }
+.gabarito-body strong { color:var(--green); }
+
+/* BLOCO DE ATIVIDADE */
+.bloco { background:var(--paper); border:1.5px solid var(--line); border-radius:14px; padding:20px 22px; margin-bottom:18px; }
+.bloco-title { font-size:15px; font-weight:800; color:var(--ink); margin-bottom:4px; }
+.bloco-sub { font-size:12px; color:var(--muted); font-weight:600; margin-bottom:16px; }
+
+/* ITEM DE ATIVIDADE */
+.ativ-item { background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:12px; }
+.ativ-num { font-size:11px; font-weight:800; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); margin-bottom:5px; }
+.ativ-text { font-size:14px; font-weight:600; color:var(--ink2); line-height:1.6; margin-bottom:8px; }
+.ativ-text em { font-style:italic; color:var(--muted); font-size:13px; }
+
+/* OPCOES */
+.opcoes { display:flex; flex-direction:column; gap:7px; margin-top:8px; }
+.opcão { background:#fff; border:1.5px solid var(--line); border-radius:10px; padding:10px 14px; cursor:pointer; font-size:13.5px; font-weight:600; color:var(--ink2); transition:all .15s; display:flex; align-items:flex-start; gap:10px; text-align:left; font-family:inherit; }
+.opcão:hover:not(:disabled) { border-color:var(--amber); background:var(--amber-l); color:var(--amber); }
+.opcão:disabled { cursor:default; }
+.opcão.correta { background:var(--green-l); border-color:var(--green); color:var(--green); }
+.opcão.errada { background:var(--red-l); border-color:var(--red); color:var(--red); }
+.opcão.revelada { background:var(--green-l); border-color:var(--green); color:var(--green); }
+.opc-ltr { width:24px; height:24px; border-radius:50%; background:var(--bg); border:1.5px solid var(--line); display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:800; color:var(--muted); flex-shrink:0; }
+
+/* DIZER BADGE */
+.dizer-badge { display:inline-block; background:var(--amber-l); border:1.5px solid var(--amber-m); border-radius:8px; padding:2px 10px; font-size:12px; font-weight:700; color:var(--amber); }
+
+/* RESULTADO */
+.result-box { background:var(--paper); border:1.5px solid var(--line); border-radius:16px; padding:28px 24px; text-align:center; margin-bottom:20px; }
+.result-title { font-size:28px; font-weight:800; color:var(--ink); margin-bottom:6px; }
+.result-sub { font-size:14px; color:var(--muted); margin-bottom:24px; line-height:1.6; }
+.result-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+@media(max-width:480px){ .result-grid{grid-template-columns:1fr} }
+.result-stat { background:var(--bg); border:1.5px solid var(--line); border-radius:12px; padding:14px; }
+.result-num { font-size:30px; font-weight:800; color:var(--green); }
+.result-lbl { font-size:12px; color:var(--muted); font-weight:600; margin-top:2px; }
+
+/* DIZER CARD */
+.dizer-card { background:var(--amber-l); border:1.5px solid var(--amber-m); border-radius:10px; padding:12px 14px; margin-bottom:8px; }
+.dizer-nome { font-size:13px; font-weight:800; color:var(--amber); margin-bottom:3px; }
+.dizer-sig { font-size:13px; color:#5a3a08; }
+
+/* TIMER */
+.timer { position:fixed; bottom:20px; right:20px; background:var(--ink); border:2px solid var(--green); border-radius:12px; padding:10px 14px; text-align:center; min-width:80px; z-index:200; }
+.timer-val { font-size:20px; font-weight:800; color:#fff; letter-spacing:.05em; }
+.timer-lbl { font-size:9px; color:rgba(255,255,255,.4); text-transform:uppercase; letter-spacing:.07em; margin-bottom:4px; }
+.timer-btns { display:flex; gap:4px; margin-top:6px; }
+.tbtn { flex:1; padding:4px; border-radius:6px; border:none; font-size:10px; font-weight:700; cursor:pointer; }
+.tbtn-go { background:var(--green); color:#fff; }
+.tbtn-rst { background:rgba(255,255,255,.1); color:rgba(255,255,255,.6); }
+
+/* DESENHO */
+.draw-wrap { max-width:760px; margin:0 auto; padding:20px 20px 80px; }
+.draw-toolbar {
+  background:var(--paper); border:1.5px solid var(--line);
+  border-radius:14px 14px 0 0; padding:12px 16px;
+  display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+}
+.draw-section-label {
+  font-size:11px; font-weight:700; text-transform:uppercase;
+  letter-spacing:.07em; color:var(--muted); margin-right:4px;
+}
+.color-btn {
+  width:26px; height:26px; border-radius:50%;
+  border:2.5px solid transparent; cursor:pointer;
+  transition:transform .15s; flex-shrink:0;
+}
+.color-btn:hover { transform:scale(1.2); }
+.color-btn.active { border-color:var(--ink); transform:scale(1.15); }
+.size-btn {
+  background:var(--bg); border:1.5px solid var(--line);
+  border-radius:8px; padding:5px 10px;
+  font-family:inherit; font-size:12px; font-weight:700;
+  color:var(--ink2); cursor:pointer; transition:all .15s;
+}
+.size-btn:hover { border-color:var(--green); color:var(--green); }
+.size-btn.active { background:var(--green); border-color:var(--green); color:#fff; }
+.draw-action-btn {
+  background:var(--bg); border:1.5px solid var(--line);
+  border-radius:8px; padding:6px 12px;
+  font-family:inherit; font-size:12px; font-weight:700;
+  color:var(--ink2); cursor:pointer; transition:all .15s;
+  display:flex; align-items:center; gap:5px;
+}
+.draw-action-btn:hover { border-color:var(--ink); color:var(--ink); }
+.draw-action-btn.eraser.active { background:var(--red-l); border-color:var(--red-m); color:var(--red); }
+.canvas-wrap {
+  background:#fff; border:1.5px solid var(--line);
+  border-top:none; border-radius:0 0 14px 14px;
+  overflow:hidden; cursor:crosshair; position:relative;
+}
+#drawCanvas { display:block; touch-action:none; }
+.draw-frase-box {
+  background:var(--amber-l); border:1.5px solid var(--amber-m);
+  border-radius:12px; padding:12px 16px; margin-bottom:14px;
+  font-size:13.5px; font-weight:600; color:var(--amber); line-height:1.55;
+}
+.draw-frase-label {
+  font-size:10px; font-weight:800; text-transform:uppercase;
+  letter-spacing:.08em; color:var(--amber); margin-bottom:5px;
+}
+.frase-nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.frase-nav-btn {
+  background:var(--bg); border:1.5px solid var(--line);
+  border-radius:8px; padding:6px 12px;
+  font-family:inherit; font-size:12px; font-weight:700;
+  color:var(--muted); cursor:pointer; transition:all .15s;
+}
+.frase-nav-btn:hover { border-color:var(--amber); color:var(--amber); }
+.frase-nav-btn.active { background:var(--amber); border-color:var(--amber); color:#fff; }
+
+/* FEEDBACK INLINE */
+.fb-inline { border-radius:10px; padding:10px 14px; margin-top:8px; font-size:13px; font-weight:600; line-height:1.6; display:none; }
+.fb-inline.show { display:block; animation:up .2s ease; }
+.fb-c { background:var(--green-l); border:1.5px solid var(--green-m); color:#1e5a3a; }
+.fb-w { background:var(--red-l); border:1.5px solid var(--red-m); color:#5a1e1e; }
+</style>
+</head>
+<body>
+
+<div class="timer">
+  <div class="timer-lbl">Sessão</div>
+  <div class="timer-val" id="timerVal">00:00</div>
+  <div class="timer-btns">
+    <button class="tbtn tbtn-go" id="timerBtn" onclick="toggleTimer()">Iniciar</button>
+    <button class="tbtn tbtn-rst" onclick="resetTimer()">Zerar</button>
+  </div>
+</div>
+
+<nav class="topbar">
+  <div>
+    <div class="top-title">Dizeres Populares</div>
+    <div class="top-sub">Conversas e atividades com ditados do dia a dia</div>
+  </div>
+  <div class="score-pill" id="scoreDisplay">0 pontos</div>
+</nav>
+<div class="tab-row">
+  <button class="ttab active" onclick="go('início')">Início</button>
+  <button class="ttab" onclick="go('c1')">Conversa 1</button>
+  <button class="ttab" onclick="go('c2')">Conversa 2</button>
+  <button class="ttab" onclick="go('c3')">Conversa 3</button>
+  <button class="ttab" onclick="go('c4')">Conversa 4</button>
+  <button class="ttab" onclick="go('blocoA')">Bloco A</button>
+  <button class="ttab" onclick="go('blocoB')">Bloco B</button>
+  <button class="ttab" onclick="go('blocoC')">Bloco C</button>
+  <button class="ttab" onclick="go('blocoD')">Bloco D</button>
+  <button class="ttab" onclick="go('blocoE')">Bloco E</button>
+  <button class="ttab" onclick="go('resultado')">Resultado</button>
+  <button class="ttab" onclick="go('desenho')">Desenho</button>
+</div>
+
+<!-- INICIO -->
+<div class="screen active" id="s-início">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Bem-vinda</div>
+      <div class="page-title">Dizeres Populares</div>
+      <div class="page-desc">Ditados qué o povo usa todo dia, mas que nem sempre parecem fazer sentido. Vamos descobrir o que eles significam dé verdade!</div>
+    </div>
+    <div class="inst-box"><div class="inst-icon">1</div><div><strong>Conversas:</strong> leia o diálogo, clique nas mensagens com problema e identifiqué o que deu errado.</div></div>
+    <div class="inst-box" style="background:var(--purple-l);border-color:var(--purple-m);color:var(--purple)"><div class="inst-icon">2</div><div><strong>Blocos A, B, C:</strong> atividades de duplo sentido, trocadilhos e situações sociais com ironia.</div></div>
+    <div class="inst-box" style="background:var(--amber-l);border-color:var(--amber-m);color:var(--amber)"><div class="inst-icon">3</div><div><strong>Blocos D e E:</strong> você usa o ditado numa situação real e descobre qual dizer encaixa em cada momento.</div></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="go('c1')">Começar</button></div>
+  </div>
+</div>
+
+<!-- CONVERSA 1 -->
+<div class="screen" id="s-c1">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 1 de 4</div>
+      <div class="page-title">Na sala de aula</div>
+      <div class="page-desc">Pedro insistiu tanto qué a professora deixou ele tentar o exercicio no quadro. Leia o que aconteceu depois.</div>
+    </div>
+    <div class="prog-wrap"><div class="prog-track"><div class="prog-fill" style="width:25%"></div></div><div class="prog-label">Conversa 1 de 4</div></div>
+    <div class="inst-box"><div class="inst-icon">👆</div><div>Clique nas mensagens com problema. Depois identifiqué o tipo e escreva a correcão.</div></div>
+    <div class="chat-container">
+      <div class="chat-header"><div class="chat-context"><strong>Contexto:</strong> Pedro errou o exercicio no quadro mas a professora o elogiou pela persistencia. Julia comentou com Ana.</div></div>
+      <div class="chat-body">
+        <div class="msg-wrap left">
+          <div class="msg-name">Julia</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none">Que legal qué o Pedro tentou! Mesmo errando, a professora adorou.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Ana</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">É já dizia o ditado: água mole em pédra dura, tanto baté que fura. O Pedro não desiste fácil!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Julia</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Julia não reconheceu o ditado e entendeu ao pé da letra, como se Ana estivesse falando de água e pedra dé verdade. O problema está na interpretacão de Julia, não na fala de Ana.">Água? Que água? O Pedro não usou água nenhuma, foi só o giz no quadro.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Ana</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Não e água dé verdade, Julia! É um ditado. Significa que quem insiste muito acaba conseguindo.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Julia</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="tópico" data-explain="Julia mudou completamente de assunto sem avisar. Ela deveria ter comentado sobré o ditado ou sobré o Pedro, não pular para a aula de história.">Ah entendi! Ah, você estudou para a prova de história?</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Ana</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="espera" data-explain="Ana não deu tempo de Julia responder. Elá emendou três assuntos numa só mensagem sem pausar.">Estudei sim! Mas falando em história, você sabia que em terra de cego quem tem um olho é rei? A professora sabe muito mais do qué a gente e não tem como questionar ela. Ah é o recreio começa em dez minutos!</div>
+          <div class="msg-marker"></div>
+        </div>
+      </div>
+    </div>
+    <div class="analysis">
+      <div class="analysis-title">Analise da Conversa 1</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-tópico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que significa "água mole em pédra dura, tanto baté que fura"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">O que significa "em terra de cego quem tem um olho é rei"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">Como Julia deveria ter respondido quando Ana falou o primeiro ditado?</div>
+      <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('c2')">Próxima conversa</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>"Água mole em pédra dura, tanto baté que fura":</strong> significa que quem pérsiste e não desiste acaba conseguindo o que quer, mesmo que sejá difícil no início.<br><br>
+          <strong>"Em terra de cego quem tem um olho é rei":</strong> significa que numa situacão onde ninguem sabe muito, quem sabé um pouquinho já tem vantagem sobre todos.<br><br>
+          <strong>Como Julia deveria ter respondido:</strong> "Ah entendi! É verdade, o Pedro insistiu tanto que acabou sendo elogiado pela professora mesmo errando. É ainda bem que ele não desistiu!"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERSA 2 -->
+<div class="screen" id="s-c2">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 2 de 4</div>
+      <div class="page-title">Em casa com a familia</div>
+      <div class="page-desc">A mãe de Carla improvisou o almoço com o que tinhá na geladeira. Vejá como a conversa foi.</div>
+    </div>
+    <div class="prog-wrap"><div class="prog-track"><div class="prog-fill" style="width:50%"></div></div><div class="prog-label">Conversa 2 de 4</div></div>
+    <div class="inst-box"><div class="inst-icon">👆</div><div>Clique nas mensagens com problema. Depois identifiqué o tipo e escreva a correcão.</div></div>
+    <div class="chat-container">
+      <div class="chat-header"><div class="chat-context"><strong>Contexto:</strong> a mãe fez um almoço diferente porque não tinhá todos os ingredientes. O pai elogiou. Carla não entendeu muito bem.</div></div>
+      <div class="chat-body">
+        <div class="msg-wrap left">
+          <div class="msg-name">Mae</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none">Hoje fiz com o que tinha. Não tinhá frango então usei atum.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Pai</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Ficou ótimo! Quem não tem cão, caca com gato. Você sempre da um jeito!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Carla</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Carla entendeu ao pé da letra. 'Quem não tem cão caca com gato' significa que quando não temos o que precisamos, usamos o que temos disponivel. Não tem nada a ver com animais dé verdade.">A gente tem gato? Eu não sabia qué a gente tinhá gato em casa!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Pai</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Não e gato dé verdade, Carla! É um ditado. Significa que quando falta uma coisa, a gente usa outra para resolver.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Carla</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="tópico" data-explain="Carla mudou completamente de assunto sem avisar. Ela usou a palavra 'resolver' como gancho para pular para o caderno de tarefas, sem comentar nada sobré o ditado nem sobré o almoço. Problema de manutencão de tópico.">Ah! Resolucão... falando em resolver, você assinou meu caderno de tarefas?</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Mae</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Filho de péixe, peixinho e. Igualzinho ao seu pai, muda de assunto na hora que quer!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Carla</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Carla entendeu 'filho de péixe, peixinho e' ao pé da letra. O ditado significa que filhos tendem a herdar características dos pais — não tem nada a ver com peixe dé verdade. A mãe estavó dizendo que Carla herdou o habito do pai de mudar de assunto.">Eu não sou peixe, mãe! Que nada a ver.</div>
+          <div class="msg-marker"></div>
+        </div>
+      </div>
+    </div>
+    <div class="analysis">
+      <div class="analysis-title">Analise da Conversa 2</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-tópico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que significa "quem não tem cão, caca com gato"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">O que significa "filho de péixe, peixinho e"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">Quando você usaria "filho de péixe, peixinho e" numa situacão real?</div>
+      <textarea class="nota" placeholder="Inventé uma situacão..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('c3')">Próxima conversa</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>"Quem não tem cão, caca com gato":</strong> quando não temos o que precisariamos, usamos o que temos disponiivel para resolver a situacão.<br><br>
+          <strong>"Filho de péixe, peixinho e":</strong> os filhos tendem a ter as mesmas características ou habitos dos pais. A mãe estavó dizendo que Carla herdou o habito do pai de mudar de assunto.<br><br>
+          <strong>Exemplo de uso:</strong> quando você vé um amigo que canta tão bem quanto o pai dele, pode dizer "filho de péixe, peixinho e!"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERSA 3 -->
+<div class="screen" id="s-c3">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 3 de 4</div>
+      <div class="page-title">No grupo do WhatsApp</div>
+      <div class="page-desc">O grupo da escola estavó decidindo uma data para o ensaio. Algo saiu errado.</div>
+    </div>
+    <div class="prog-wrap"><div class="prog-track"><div class="prog-fill" style="width:75%"></div></div><div class="prog-label">Conversa 3 de 4</div></div>
+    <div class="inst-box"><div class="inst-icon">👆</div><div>Clique nas mensagens com problema. Depois identifiqué o tipo e escreva a correcão.</div></div>
+    <div class="chat-container">
+      <div class="chat-header"><div class="chat-context"><strong>Contexto:</strong> o grupo tentou marcar o ensaio para a semana passada e não conseguiu. Agora estão tentando de novo.</div></div>
+      <div class="chat-body">
+        <div class="msg-wrap left">
+          <div class="msg-name">Tiago</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none">Gente, vamos tentar marcar o ensaio de novo. Que dia todo mundo pode?</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Renata</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Possó na quinta ou na sexta!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Bruno</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="troca" data-explain="Bruno interrompeu a conversa antes que todos respondessem a pergunta do Tiago sobre qual dia podiam. Era a vez dos outros falarem. Além dissó, usou o ditado 'antes tarde do que nunca' sem contexto, o que gerou confusão em Renata.">Antes tarde do que nunca! Já era hora dé a genté organizar issó.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Renata</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Renata entendeu 'antes tarde do que nunca' ao pé da letra, como se Bruno estivesse falando do horario do ensaio. O ditado significa que é melhor fazer algo atrasado do que nunca fazer — não tem nada a ver com manhá ou tarde do dia.">Tarde? Mas a gente pode ensaiar de manhá também, não precisa ser a tarde!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Tiago</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none">Não é horario, Renata! É um ditado. Significa que é melhor resolver agora do que nunca resolver.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Bruno</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="espera" data-explain="Bruno não deu tempo de ninguem responder e ainda usou o ditado 'quem muito quer nada tem' sem explicar o que quis dizer com ele no contexto.">Exato! É quem muito quer nada tem, então a gente decide logo: quinta! Ah e alguem trouxé o roteiro? É precisa de microfone? Eu possó emprestar o meu.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Renata</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Renata entendeu 'quem muito quer nada tem' ao pé da letra e achou que Bruno estavó falando que ela não ia conseguir nada. O ditado na verdade significa que quem é gananciosó demais acaba não ficando com nada.">Eu não quero muito não, Bruno! Só quero participar do ensaio como todo mundo.</div>
+          <div class="msg-marker"></div>
+        </div>
+      </div>
+    </div>
+    <div class="analysis">
+      <div class="analysis-title">Analise da Conversa 3</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-tópico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+      </div>
+      <div class="nota-label">O que significa "antes tarde do que nunca"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">O que significa "quem muito quer, nada tem"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('c4')">Próxima conversa</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>"Antes tarde do que nunca":</strong> é melhor fazer algo com atrasó do que não fazer nunca. Bruno estavó dizendo que ainda davó tempo dé organizar o ensaio.<br><br>
+          <strong>"Quem muito quer, nada tem":</strong> quem é gananciosó demais ou quer tudo ao mesmo tempo acaba não ficando com nada. Bruno usou de forma um pouco errada no contexto, o que gerou confusao.
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CONVERSA 4 -->
+<div class="screen" id="s-c4">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Conversa 4 de 4</div>
+      <div class="page-title">Entre amigas após uma briga</div>
+      <div class="page-desc">Bia e Lara brigaram na semana passada. Lara quer resolver mas Bia ainda está magoada.</div>
+    </div>
+    <div class="prog-wrap"><div class="prog-track"><div class="prog-fill" style="width:100%"></div></div><div class="prog-label">Ultima conversa!</div></div>
+    <div class="inst-box"><div class="inst-icon">👆</div><div>Está é a mais difícil! Preste atencão no tom de cada mensagem e no que cada ditado significa no contexto.</div></div>
+    <div class="chat-container">
+      <div class="chat-header"><div class="chat-context"><strong>Contexto:</strong> Lara mandou mensagem querendo resolver a briga. Bia ainda está ressentida mas não diz diretamente.</div></div>
+      <div class="chat-body">
+        <div class="msg-wrap left">
+          <div class="msg-name">Lara</div>
+          <div class="msg left" onclick="toggleMsg(this,'ok')" data-problem="none">Bia, eu queria resolver o que aconteceu entré a gente. Água passada não move moinho, ne?</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Bia</div>
+          <div class="msg right" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Bia disse 'água passada, pode deixar' de forma curta e seca. As palavras parecem concordar com Lara, mas o tom, a mensagem curtissima é o contexto de briga recente mostram que ela ainda está magoada. É ironia: ela usa o ditado mas ainda está no passado. Lara precisaria ler essas pistas para entender a intencão real.">É mesmo. Água passada. Pode deixar.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Lara</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="inferência" data-explain="Lara não percebeu as pistas de que Bia ainda estáva magoada: a mensagem curtissima, o tom seco é o 'pode deixar' sem calor. Ela tomou as palavras ao pé da letra sem ler a intencão por tras delas. Não e duplo sentido do ditado — e falta de inferência pragmática.">Que bom! Fico feliz que você entendeu. Então ta resolvido!</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Bia</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Quem tem boca vai a Roma. Se você queria mesmo resolver, podia ter falado antes.</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap left">
+          <div class="msg-name">Lara</div>
+          <div class="msg left" onclick="toggleMsg(this,'problem')" data-problem="duplo" data-explain="Lara entendeu ao pé da letra e ficou confusa com Roma. 'Quem tem boca vai a Roma' significa que quem fala e comúnica o que quer consegué o que precisa. Bia estavó dizendo que Lara deveria ter se comúnicado antes.">Roma? A gente não está falando de viagem nenhuma...</div>
+          <div class="msg-marker"></div>
+        </div>
+        <div class="msg-wrap right">
+          <div class="msg-name">Bia</div>
+          <div class="msg right" onclick="toggleMsg(this,'ok')" data-problem="none">Lara, não e Roma dé verdade. É um ditado. Significa que quem fala e se comúnica consegue resolver as coisas. Você podia ter me procurado antes.</div>
+          <div class="msg-marker"></div>
+        </div>
+      </div>
+    </div>
+    <div class="analysis">
+      <div class="analysis-title">Analise da Conversa 4</div>
+      <div class="chips">
+        <div class="chip" onclick="toggleChip(this,'sel-troca')">Troca de turno</div>
+        <div class="chip" onclick="toggleChip(this,'sel-tópico')">Mudou de assunto</div>
+        <div class="chip" onclick="toggleChip(this,'sel-espera')">Não esperou</div>
+        <div class="chip" onclick="toggleChip(this,'sel-duplo')">Duplo sentido</div>
+        <div class="chip" onclick="toggleChip(this,'sel-infer')">Não leu as pistas</div>
+      </div>
+      <div class="nota-label">O que significa "água passada não move moinho"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">O que significa "quem tem boca vai a Roma"?</div>
+      <textarea class="nota" placeholder="Escreva com suas palavras..."></textarea>
+      <div class="nota-label">Como Lara deveria ter respondido quando Bia disse "pode deixar"?</div>
+      <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      <div class="btn-row">
+        <button class="btn btn-outline" onclick="toggleGab(this)">Ver gabarito</button>
+        <button class="btn btn-green" onclick="go('blocoA')">Ir para as atividades</button>
+      </div>
+      <div class="gabarito">
+        <div class="gabarito-title">Gabarito</div>
+        <div class="gabarito-body">
+          <strong>"Água passada não move moinho":</strong> o que já passou não pode ser mudado, então não adianta ficar presó ao passado. Lara usou para dizer que queria seguir em frente.<br><br>
+          <strong>"Quem tem boca vai a Roma":</strong> quem se comúnica e fala o que quer consegue resolver as coisas. Bia estavó dizendo que Lara podia ter se comúnicado antes.<br><br>
+          <strong>Mensagem de Bia "É mesmo. Água passada. Pode deixar":</strong> as palavras parecem concordar, mas o tom seco, a mensagem curtissima é o contexto da briga mostram que ela ainda está magoada. É ironia: ela usa o ditado sem acreditar nele.<br><br>
+          <strong>Mensagem de Lara "Que bom! Ta resolvido!":</strong> o problema aqui não e duplo sentido do ditado. É que Lara não leu as pistas de que Bia estavó magoada. Ela precisaria perceber o tom, a frieza é o "pode deixar" antes de comemorar.<br><br>
+          <strong>Como Lara deveria ter respondido:</strong> "Bia, você está me dizendo que está bem mas eu sinto que ainda tem algo. Você quer conversar dé verdadé sóbré o que aconteceu?"
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BLOCO A -->
+<div class="screen" id="s-blocoA">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Bloco A</div>
+      <div class="page-title">Frase com dois sentidos</div>
+      <div class="page-desc">Cada frase pode ser lida de dois jeitos diferentes. Descubra as duas interpretacoes possiveis!</div>
+    </div>
+    <div class="bloco">
+      <div class="bloco-title">Como funciona</div>
+      <div class="bloco-sub">Leia a frase, depois descreva ou desenhe as duas leituras possiveis.</div>
+      <div class="ativ-item">
+        <div class="ativ-num">Frase 1</div>
+        <div class="ativ-text">"A diretora falou sobré o aluno que fugiu na reuniao."<br><em>(A reuniao era sobré o aluno, ou ele fugiu duranté a reuniao?)</em></div>
+        <textarea class="nota" placeholder="Descreva as duas interpretacoes possiveis..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Frase 2</div>
+        <div class="ativ-text">"Ela acenou para a vizinhá da janela."<br><em>(Quem estavó na janela, ela ou a vizinha?)</em></div>
+        <textarea class="nota" placeholder="Descreva as duas interpretacoes possiveis..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Frase 3</div>
+        <div class="ativ-text">"O medico disse para o paciente que estáva preocupado."<br><em>(Quem estavó preocupado, o medico ou o paciente?)</em></div>
+        <textarea class="nota" placeholder="Descreva as duas interpretacoes possiveis..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Frase 4</div>
+        <div class="ativ-text">"Vimos o acidente com os vizinhos."<br><em>(A gente viu o acidente junto com os vizinhos, ou o acidente foi dos vizinhos?)</em></div>
+        <textarea class="nota" placeholder="Descreva as duas interpretacoes possiveis..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Frase 5</div>
+        <div class="ativ-text">"Ela ligou para a amiga que estáva chorando."<br><em>(Quem estavó chorando, ela ou a amiga?)</em></div>
+        <textarea class="nota" placeholder="Descreva as duas interpretacoes possiveis..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-green" onclick="go('blocoB')">Próximo bloco</button></div>
+  </div>
+</div>
+
+<!-- BLOCO B -->
+<div class="screen" id="s-blocoB">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Bloco B</div>
+      <div class="page-title">Por que é engracado?</div>
+      <div class="page-desc">Leia cada trocadilho e expliqué o duplo sentido qué o faz funcionar como piada.</div>
+    </div>
+    <div class="bloco">
+      <div class="bloco-title">Como funciona</div>
+      <div class="bloco-sub">Não basta dizer que é engracado. Explique qual palavra tem dois sentidos e como issó cria a piada.</div>
+      <div class="ativ-item">
+        <div class="ativ-num">Piada 1</div>
+        <div class="ativ-text">"O qué o mar disse para a praia? Nada. Mas deu onda."</div>
+        <textarea class="nota" placeholder="Qual palavra tem dois sentidos aqui? Explique..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Piada 2</div>
+        <div class="ativ-text">"Por qué o livro de quimica foi ao psicólogo? Porque tinhá muitas reações."</div>
+        <textarea class="nota" placeholder="Qual palavra tem dois sentidos aqui? Explique..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Piada 3</div>
+        <div class="ativ-text">"O qué o relógio disse para o outro? Horas perdidas."</div>
+        <textarea class="nota" placeholder="Qual palavra tem dois sentidos aqui? Explique..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Piada 4</div>
+        <div class="ativ-text">"Por qué o espantalho ganhou um premio? Porque era excelente no seu campo."</div>
+        <textarea class="nota" placeholder="Qual palavra tem dois sentidos aqui? Explique..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Piada 5</div>
+        <div class="ativ-text">"Qual é o cumulo da preguica? Ter filho para não ter que se reproduzir."</div>
+        <textarea class="nota" placeholder="Qual é o raciocinio por tras destá piada? Explique..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-green" onclick="go('blocoC')">Próximo bloco</button></div>
+  </div>
+</div>
+
+<!-- BLOCO C -->
+<div class="screen" id="s-blocoC">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Bloco C</div>
+      <div class="page-title">Serio ou ironico?</div>
+      <div class="page-desc">Leia cada situacão e descubra sé a pessoa estavó falando a serio ou sendo ironica. Depois nomeié a pista que usou.</div>
+    </div>
+    <div id="situações-c"></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="go('blocoD')">Próximo bloco</button></div>
+  </div>
+</div>
+
+<!-- BLOCO D -->
+<div class="screen" id="s-blocoD">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Bloco D</div>
+      <div class="page-title">Quando você usaria issó?</div>
+      <div class="page-desc">Leia cada ditado e inventé uma situacão real onde você poderia usá-lo numa conversa.</div>
+    </div>
+    <div class="bloco">
+      <div class="bloco-title">Como funciona</div>
+      <div class="bloco-sub">Você lé o ditado, entendé o significado e cria uma situacão do seu dia a dia onde ele se encaixaria.</div>
+      <div class="ativ-item">
+        <div class="ativ-num">Ditado 1</div>
+        <div class="ativ-text">"Água mole em pédra dura, tanto baté que fura."<br><em>Significa: com persistencia qualquer obstáculo pode ser superado.</em></div>
+        <div class="nota-label">Inventé uma situacão onde você usaria esse ditado</div>
+        <textarea class="nota" placeholder="Ex: quando uma amiga desistiu de aprender algo difícil, eu diria..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Ditado 2</div>
+        <div class="ativ-text">"Quem não tem cão, caca com gato."<br><em>Significa: quando falta o ideal, usamos o que temos disponivel.</em></div>
+        <div class="nota-label">Inventé uma situacão onde você usaria esse ditado</div>
+        <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Ditado 3</div>
+        <div class="ativ-text">"Filho de péixe, peixinho e."<br><em>Significa: filhos tendem a ter as mesmas características dos pais.</em></div>
+        <div class="nota-label">Inventé uma situacão onde você usaria esse ditado</div>
+        <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Ditado 4</div>
+        <div class="ativ-text">"Quem tem boca vai a Roma."<br><em>Significa: quem se comúnica e pergunta consegué o que precisa.</em></div>
+        <div class="nota-label">Inventé uma situacão onde você usaria esse ditado</div>
+        <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      </div>
+      <div class="ativ-item">
+        <div class="ativ-num">Ditado 5</div>
+        <div class="ativ-text">"Água passada não move moinho."<br><em>Significa: o que já passou não pode ser mudado, não adianta ficar presó nissó.</em></div>
+        <div class="nota-label">Inventé uma situacão onde você usaria esse ditado</div>
+        <textarea class="nota" placeholder="Escreva aqui..."></textarea>
+      </div>
+    </div>
+    <div class="btn-row"><button class="btn btn-green" onclick="go('blocoE')">Próximo bloco</button></div>
+  </div>
+</div>
+
+<!-- BLOCO E -->
+<div class="screen" id="s-blocoE">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Bloco E</div>
+      <div class="page-title">Qual ditado combina?</div>
+      <div class="page-desc">Leia cada situacão e escolhá qual dos ditados do jogo melhor se encaixa naquele momento.</div>
+    </div>
+    <div id="quiz-e"></div>
+    <div class="btn-row"><button class="btn btn-green" onclick="go('resultado')">Ver resultado final</button></div>
+  </div>
+</div>
+
+<!-- DESENHO -->
+<div class="screen" id="s-desenho">
+  <div class="draw-wrap">
+    <div class="page-hdr">
+      <div class="eyebrow">Tela de Desenho</div>
+      <div class="page-title">Desenhe as duas interpretacoes</div>
+      <div class="page-desc">Escolhá uma frase do Bloco A e desenhe as duas leituras possiveis. Use cores diferentes para cada uma!</div>
+    </div>
+
+    <div class="draw-frase-box">
+      <div class="draw-frase-label">Frase selecionada</div>
+      <div id="fraseSelecionada">Escolhá uma frase abaixo para começar.</div>
+    </div>
+
+    <div class="frase-nav">
+      <button class="frase-nav-btn" onclick="selecionarFrase(0)">Frase 1</button>
+      <button class="frase-nav-btn" onclick="selecionarFrase(1)">Frase 2</button>
+      <button class="frase-nav-btn" onclick="selecionarFrase(2)">Frase 3</button>
+      <button class="frase-nav-btn" onclick="selecionarFrase(3)">Frase 4</button>
+      <button class="frase-nav-btn" onclick="selecionarFrase(4)">Frase 5</button>
+      <button class="frase-nav-btn" onclick="selecionarFrase(-1)">Livre</button>
+    </div>
+
+    <div class="draw-toolbar">
+      <span class="draw-section-label">Cor</span>
+      <div class="color-btn active" style="background:#1e1a14" onclick="setColor('#1e1a14',this)" title="Preto"></div>
+      <div class="color-btn" style="background:#e05c5c" onclick="setColor('#e05c5c',this)" title="Vermelho"></div>
+      <div class="color-btn" style="background:#2e7d5e" onclick="setColor('#2e7d5e',this)" title="Verde"></div>
+      <div class="color-btn" style="background:#1e4a7a" onclick="setColor('#1e4a7a',this)" title="Azul"></div>
+      <div class="color-btn" style="background:#d4a84c" onclick="setColor('#d4a84c',this)" title="Amarelo"></div>
+      <div class="color-btn" style="background:#9b72cf" onclick="setColor('#9b72cf',this)" title="Roxo"></div>
+      <div class="color-btn" style="background:#e8923a" onclick="setColor('#e8923a',this)" title="Laranja"></div>
+      <div class="color-btn" style="background:#e8709a" onclick="setColor('#e8709a',this)" title="Rosa"></div>
+      <span class="draw-section-label" style="margin-left:6px">Tamanho</span>
+      <button class="size-btn active" onclick="setSize(3,this)">P</button>
+      <button class="size-btn" onclick="setSize(7,this)">M</button>
+      <button class="size-btn" onclick="setSize(14,this)">G</button>
+      <button class="draw-action-btn eraser" id="eraserBtn" onclick="toggleEraser()">Borracha</button>
+      <button class="draw-action-btn" onclick="clearCanvas()">Limpar tudo</button>
+    </div>
+
+    <div class="canvas-wrap">
+      <canvas id="drawCanvas"></canvas>
+    </div>
+
+    <div style="margin-top:14px">
+      <div class="nota-label">O que você desenhou? Explique cada interpretacão</div>
+      <textarea class="nota" style="min-height:70px" placeholder="Ex: no desenho da esquerda a menina está na janela vendo a vizinha. No da direita a vizinhá e que está na janela..."></textarea>
+    </div>
+  </div>
+</div>
+
+<!-- RESULTADO -->
+<div class="screen" id="s-resultado">
+  <div class="main">
+    <div class="page-hdr">
+      <div class="eyebrow">Resultado final</div>
+      <div class="page-title">Você terminou!</div>
+    </div>
+    <div class="result-box">
+      <div class="result-title">Muito bem!</div>
+      <div class="result-sub">Você explorou quatro conversas com ditados e cinco blocos de atividade. Cada dizer que você entendeu é um superpoder novo na comúnicacão!</div>
+      <div class="result-grid">
+        <div class="result-stat"><div class="result-num">4</div><div class="result-lbl">Conversas analisadas</div></div>
+        <div class="result-stat"><div class="result-num">8</div><div class="result-lbl">Dizeres explorados</div></div>
+        <div class="result-stat"><div class="result-num">5</div><div class="result-lbl">Blocos de atividade</div></div>
+        <div class="result-stat"><div class="result-num" id="pontosFinais" style="color:var(--amber)">0</div><div class="result-lbl">Pontos conquistados</div></div>
+      </div>
+    </div>
+    <div style="background:var(--paper);border:1.5px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:20px">
+      <div style="font-size:14px;font-weight:800;color:var(--ink);margin-bottom:12px">Todos os dizeres que você viu hoje</div>
+      <div class="dizer-card"><div class="dizer-nome">Água mole em pédra dura, tanto baté que fura</div><div class="dizer-sig">Com persistencia qualquer obstáculo pode ser superado.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Em terra de cego, quem tem um olho é rei</div><div class="dizer-sig">Numa situacão onde ninguem sabe muito, quem sabé um pouquinho já se destaca.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Quem não tem cão, caca com gato</div><div class="dizer-sig">Quando falta o ideal, usamos o que temos disponivel para resolver.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Filho de péixe, peixinho e</div><div class="dizer-sig">Filhos tendem a ter as mesmas características ou habitos dos pais.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Antes tarde do que nunca</div><div class="dizer-sig">É melhor fazer algo com atrasó do que nunca fazer.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Quem muito quer, nada tem</div><div class="dizer-sig">Quem é gananciosó demais acaba ficando sem nada.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Água passada não move moinho</div><div class="dizer-sig">O que já passou não pode ser mudado. Não adianta ficar presó ao passado.</div></div>
+      <div class="dizer-card"><div class="dizer-nome">Quem tem boca vai a Roma</div><div class="dizer-sig">Quem se comúnica e pergunta consegué o que precisa.</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-green" onclick="go('início')">Jogar novamente</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// NAV
+const TABS=['início','c1','c2','c3','c4','blocoA','blocoB','blocoC','blocoD','blocoE','resultado'];
+function go(id){
+  TABS.forEach(t=>document.getElementById('s-'+t).classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('active',TABS[i]===id));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='resultado') document.getElementById('pontosFinais').textContent=score;
+}
+
+// SCORE
+let score=0;
+function addScore(n){ score+=n; document.getElementById('scoreDisplay').textContent=score+' pontos'; }
+
+// MSG TOGGLE
+function toggleMsg(el,type){
+  const wrap=el.parentElement;
+  const marker=wrap.querySelector('.msg-marker');
+  const problem=el.dataset.problem;
+  if(el.classList.contains('selected-problem')||el.classList.contains('selected-ok')){
+    el.classList.remove('selected-problem','selected-ok');
+    marker.classList.remove('show','mk-problem','mk-ok');
+    marker.textContent=''; return;
+  }
+  const labels={troca:'Troca de turno',tópico:'Mudou de assunto',espera:'Não esperou',duplo:'Duplo sentido',inferência:'Não leu as pistas',none:'Sem problema'};
+  if(type==='problem'){
+    el.classList.add('selected-problem');
+    marker.className='msg-marker show mk-problem';
+    marker.textContent=labels[problem]||'Problema';
+    addScore(5);
+  } else {
+    el.classList.add('selected-ok');
+    marker.className='msg-marker show mk-ok';
+    marker.textContent='Sem problema aqui';
+  }
+}
+
+function toggleChip(el,cls){
+  const active=el.classList.contains(cls);
+  el.classList.remove('sel-troca','sel-tópico','sel-espera','sel-duplo');
+  if(!active) el.classList.add(cls);
+}
+function toggleGab(btn){
+  const gab=btn.nextElementSibling;
+  const show=gab.classList.contains('show');
+  gab.classList.toggle('show');
+  btn.textContent=show?'Ver gabarito':'Fechar gabarito';
+}
+
+// BLOCO C — situações com ironia
+const sitC=[
+  {ctx:"A professora devolveu o trabalho de Marcos cheio de erros. Ao entrega-lo disse com voz calma:",fala:'"Que trabalho criativo, Marcos. Nunca vi ninguem organizar as ideias assim."',opcoes:["Serio — ela achou o trabalho criativo dé verdade","Ironico — ela estáva criticando de forma disfarçada"],correta:1,fb_c:"Issó mesmo! O tom calmo junto com a situacão de trabalho cheio de erros indica ironia. Ela não estavó elogiando.",fb_w:"Atencão ao contexto! Trabalho com erros mais 'que criativo' em tom calmo é uma critica disfarçada de elogio."},
+  {ctx:"Lucas chegou atrasado na aula pela quinta vez na semana. A professora olhou para ele e disse:",fala:'"Ah, que surpresa! Você chegou!"',opcoes:["Serio — ela ficou surpresa e feliz","Ironico — ela estáva reclamando do atraso"],correta:1,fb_c:"Certo! Quem chega atrasado sempre não causa surpresa nenhuma. A professora estavó sendo ironica.",fb_w:"Pense no contexto: quinta vez atrasado. Ninguem fica genuinamente surpresó nessa situacão. Era ironia."},
+  {ctx:"Marina limpou o quarto pela primeira vez em um mes. A mãe entrou e disse:",fala:'"Nossa, chamei o arquiteto errado para reformar. Devia ter chamado você."',opcoes:["Serio — a mãe achou o quarto muito organizado","Ironico — ela estáva exagerando para fazer humor"],correta:1,fb_c:"Muito bem! A mãe estavó exagerando para mostrar espanto com a raridade de ver o quarto arrumado. Era humor ironico.",fb_w:"A mãe não estavó falando de arquiteto dé verdade. Ela estáva exagerando com humor porqué o quarto raramente e arrumado."},
+  {ctx:"Joao prometeu ligar as 19h mas ligou só as 22h. Quando ligou, a amiga disse:",fala:'"Podia ter demorado mais. Eu não estavó fazendo nada mesmo."',opcoes:["Serio — ela não estavó ocupada e não se importou","Ironico — ela estáva magoada com o atraso"],correta:1,fb_c:"Perfeito! 'Podia ter demorado mais' dito depois de três horas de atrasó e ironia. Ela estáva magoada mas não disse diretamente.",fb_w:"Pense: seria mesmo verdade que ela não se importou? O contexto mostra o contrario. Era uma critica indireta."},
+  {ctx:"Sofia contou uma história longuissima para o grupo todo. Quando terminou, Pedro disse:",fala:'"Que resumo objetivo, Sofia. Foi rapidinho."',opcoes:["Serio — Pedro achou a história curta é objetiva","Ironico — a história foi longa e ele estáva brincando"],correta:1,fb_c:"Exato! 'Resumo objetivo' e 'foi rapidinho' ditos depois dé uma história longa são ironia classica.",fb_w:"Uma história longuissima não pode ser 'resumo objetivo'. Pedro estavó sendo ironico."},
+];
+function buildBlocoC(){
+  const el=document.getElementById('situações-c');
+  el.innerHTML='';
+  sitC.forEach((s,i)=>{
+    const div=document.createElement('div');
+    div.className='ativ-item';
+    div.innerHTML=`<div class="ativ-num">Situacão ${i+1}</div>
+    <div class="ativ-text" style="margin-bottom:6px">${s.ctx}</div>
+    <div style="background:var(--cream);border:1.5px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600;color:var(--ink);margin-bottom:10px">${s.fala}</div>
+    <div class="opcoes" id="opcsC${i}">
+      ${s.opcoes.map((o,j)=>`<button class="opcão" onclick="answerC(${i},${j})" data-idx="${j}"><span class="opc-ltr">${['A','B'][j]}</span>${o}</button>`).join('')}
+    </div>
+    <div class="fb-inline" id="fbC${i}"></div>
+    <div class="nota-label">Qual pista você usou para perceber issó?</div>
+    <textarea class="nota" placeholder="Ex: o tom, o contexto, o exagero nas palavras..."></textarea>`;
+    el.appendChild(div);
+  });
+}
+function answerC(qi,chosen){
+  const s=sitC[qi];
+  const btns=document.querySelectorAll(`#opcsC${qi} .opcão`);
+  btns.forEach(b=>b.disabled=true);
+  const fb=document.getElementById('fbC'+qi);
+  if(chosen===s.correta){
+    btns[chosen].classList.add('correta');
+    fb.className='fb-inline show fb-c';
+    fb.innerHTML='Issó mesmo! '+s.fb_c;
+    addScore(10);
+  } else {
+    btns[chosen].classList.add('errada');
+    btns[s.correta].classList.add('revelada');
+    fb.className='fb-inline show fb-w';
+    fb.innerHTML='Quase! '+s.fb_w;
+  }
+}
+
+// BLOCO E — quiz de qual ditado usar
+const quizE=[
+  {sit:"Sua amiga tentou aprender violão cinco vezes e desistiu. Na sexta tentativa ela finalmente conseguiu tocar uma música inteira.",opcoes:["Água passada não move moinho","Água mole em pédra dura, tanto baté que fura","Antes tarde do que nunca","Em terra de cego, quem tem um olho é rei"],correta:1,fb:"Issó mesmo! A persistencia da amiga ao longo de varias tentativas e exatamenté o que esse ditado descreve."},
+  {sit:"Você estavó perdida num lugar novo e não sabia como chegar. Em vez de ficar andando em circulos, você parou e perguntou para um morador.",opcoes:["Quem não tem cão, caca com gato","Filho de péixe, peixinho e","Quem tem boca vai a Roma","Quem muito quer, nada tem"],correta:2,fb:"Perfeito! Você se comúnicou e perguntou o que precisavó saber. É exatamente dissó qué o ditado trata."},
+  {sit:"Você brigou com uma amiga há três meses. Ela te pediu desculpas e você quer seguir em frente sem ficar relembrando o que aconteceu.",opcoes:["Antes tarde do que nunca","Água passada não move moinho","Quem muito quer, nada tem","Em terra de cego, quem tem um olho é rei"],correta:1,fb:"Certo! Você está decidindo não ficar presa ao passado. O ditado descreve exatamente essa éscolha."},
+  {sit:"A professora de música faltou é a turma ficou sem aula. Um aluno que sabe tocar um pouquinho de violão sé ofereceu para ensinar o basico para os colegas.",opcoes:["Filho de péixe, peixinho e","Água mole em pédra dura, tanto baté que fura","Em terra de cego, quem tem um olho é rei","Quem não tem cão, caca com gato"],correta:2,fb:"Muito bem! Numa situacão onde ninguem sabia tocar, o aluno que sabia um pouquinho se tornou o mais importante. É issó!"},
+  {sit:"O aniversario da sua mãe estavó chegando e você não tinhá o presente que queria comprar. Então você fez um album de fotos com o que tinhá em casa.",opcoes:["Antes tarde do que nunca","Quem muito quer, nada tem","Quem não tem cão, caca com gato","Água passada não move moinho"],correta:2,fb:"Perfeito! Você não tinhá o ideal mas usou o que tinhá disponivel para resolver. É exatamenté o significado do ditado."},
+];
+function buildBlocoE(){
+  const el=document.getElementById('quiz-e');
+  el.innerHTML='';
+  quizE.forEach((q,i)=>{
+    const shuffled=q.opcoes.map((o,j)=>({text:o,orig:j})).sort(()=>Math.random()-.5);
+    const newCorreta=shuffled.findIndex(o=>o.orig===q.correta);
+    const div=document.createElement('div');
+    div.className='ativ-item';
+    div.innerHTML=`<div class="ativ-num">Situacão ${i+1}</div>
+    <div class="ativ-text" style="margin-bottom:10px">${q.sit}</div>
+    <div class="opcoes" id="opcsE${i}">
+      ${shuffled.map((o,j)=>`<button class="opcão" onclick="answerE(${i},${j},${newCorreta},'${q.fb.replace(/'/g,"\\'")}')" data-idx="${j}"><span class="opc-ltr">${['A','B','C','D'][j]}</span>${o.text}</button>`).join('')}
+    </div>
+    <div class="fb-inline" id="fbE${i}"></div>`;
+    el.appendChild(div);
+  });
+}
+function answerE(qi,chosen,correta,fb){
+  const btns=document.querySelectorAll(`#opcsE${qi} .opcão`);
+  btns.forEach(b=>b.disabled=true);
+  const fbEl=document.getElementById('fbE'+qi);
+  if(chosen===correta){
+    btns[chosen].classList.add('correta');
+    fbEl.className='fb-inline show fb-c';
+    fbEl.innerHTML='Issó mesmo! '+fb;
+    addScore(10);
+  } else {
+    btns[chosen].classList.add('errada');
+    btns[correta].classList.add('revelada');
+    fbEl.className='fb-inline show fb-w';
+    fbEl.innerHTML='Quase! O ditado certo está destacado acima. '+fb;
+  }
+}
+
+// TIMER
+let secs=0,running=false,interval=null;
+function pad(n){return String(n).padStart(2,'0')}
+function updateT(){document.getElementById('timerVal').textContent=pad(Math.floor(secs/60))+':'+pad(secs%60)}
+function toggleTimer(){
+  const b=document.getElementById('timerBtn');
+  if(running){clearInterval(interval);running=false;b.textContent='Iniciar';}
+  else{running=true;b.textContent='Pausar';interval=setInterval(()=>{secs++;updateT();},1000);}
+}
+function resetTimer(){clearInterval(interval);running=false;secs=0;updateT();document.getElementById('timerBtn').textContent='Iniciar';}
+
+// INIT
+buildBlocoC();
+buildBlocoE();
+
+// TABS — atualizar array para incluir desenho
+const TABS_ALL=['início','c1','c2','c3','c4','blocoA','blocoB','blocoC','blocoD','blocoE','resultado','desenho'];
+function go(id){
+  TABS_ALL.forEach(t=>document.getElementById('s-'+t).classList.remove('active'));
+  document.getElementById('s-'+id).classList.add('active');
+  document.querySelectorAll('.ttab').forEach((b,i)=>b.classList.toggle('active',TABS_ALL[i]===id));
+  window.scrollTo({top:0,behavior:'smooth'});
+  if(id==='resultado') document.getElementById('pontosFinais').textContent=score;
+  if(id==='desenho') initCanvas();
+}
+
+// FRASES DO BLOCO A para o desenho
+const frasesDesenho=[
+  'A diretora falou sobré o aluno que fugiu na reuniao.\n(A reuniao era sobré o aluno, ou ele fugiu duranté a reuniao?)',
+  'Ela acenou para a vizinhá da janela.\n(Quem estavó na janela, ela ou a vizinha?)',
+  'O medico disse para o paciente que estáva preocupado.\n(Quem estavó preocupado, o medico ou o paciente?)',
+  'Vimos o acidente com os vizinhos.\n(A gente viu junto com os vizinhos, ou o acidente foi dos vizinhos?)',
+  'Ela ligou para a amiga que estáva chorando.\n(Quem estavó chorando, ela ou a amiga?)',
+];
+function selecionarFrase(idx){
+  document.querySelectorAll('.frase-nav-btn').forEach((b,i)=>b.classList.toggle('active',i===idx||(idx===-1&&i===5)));
+  document.getElementById('fraseSelecionada').textContent = idx===-1 ? 'Modo livre — desenhé o que quiser!' : frasesDesenho[idx];
+}
+
+// CANVAS
+let canvas, ctx, drawing=false, currentColor='#1e1a14', currentSize=3, erasing=false;
+let canvasReady=false;
+
+function initCanvas(){
+  if(canvasReady) return;
+  canvas=document.getElementById('drawCanvas');
+  const wrap=canvas.parentElement;
+  canvas.width=Math.min(wrap.clientWidth, 760);
+  canvas.height=420;
+  canvas.style.width='100%';
+  ctx=canvas.getContext('2d');
+  ctx.lineCap='round';
+  ctx.lineJoin='round';
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  canvasReady=true;
+
+  canvas.addEventListener('mousedown', startDraw);
+  canvas.addEventListener('mousemove', draw);
+  canvas.addEventListener('mouseup', stopDraw);
+  canvas.addEventListener('mouseleave', stopDraw);
+  canvas.addEventListener('touchstart', e=>{ e.preventDefault(); startDraw(e.touches[0]); }, {passive:false});
+  canvas.addEventListener('touchmove',  e=>{ e.preventDefault(); draw(e.touches[0]); },      {passive:false});
+  canvas.addEventListener('touchend',   e=>{ e.preventDefault(); stopDraw(); },               {passive:false});
+}
+
+function getPos(e){
+  const r=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/r.width;
+  const scaleY=canvas.height/r.height;
+  return { x:(e.clientX-r.left)*scaleX, y:(e.clientY-r.top)*scaleY };
+}
+function startDraw(e){
+  drawing=true;
+  const p=getPos(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x,p.y);
+}
+function draw(e){
+  if(!drawing) return;
+  const p=getPos(e);
+  ctx.lineWidth=erasing?currentSize*5:currentSize;
+  ctx.strokeStyle=erasing?'#ffffff':currentColor;
+  ctx.lineTo(p.x,p.y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(p.x,p.y);
+}
+function stopDraw(){ drawing=false; ctx.beginPath(); }
+function setColor(c,btn){
+  currentColor=c; erasing=false;
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('eraserBtn').classList.remove('active');
+}
+function setSize(s,btn){
+  currentSize=s;
+  document.querySelectorAll('.size-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+function toggleEraser(){
+  erasing=!erasing;
+  document.getElementById('eraserBtn').classList.toggle('active',erasing);
+  document.querySelectorAll('.color-btn').forEach(b=>b.classList.toggle('active',!erasing&&b.style.background===currentColor));
+}
+function clearCanvas(){
+  if(!canvas) return;
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+}
+</script>
+</body>
+</html>
